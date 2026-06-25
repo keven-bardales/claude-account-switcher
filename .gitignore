@@ -1,0 +1,3 @@
+# Your real accounts config lives in $HOME, never in the repo - but just in case:
+.claude-accounts.json
+*.local

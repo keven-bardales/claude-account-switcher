@@ -1,0 +1,14 @@
+{
+  "default": "personal",
+  "profiles": {
+    "personal": "",
+    "work": "C:\\Users\\YOUR_USERNAME\\.claude-work"
+  },
+  "byPath": {
+    "C:\\Users\\YOUR_USERNAME\\code\\a-specific-work-repo": "work",
+    "C:\\Users\\YOUR_USERNAME\\work": "work"
+  },
+  "byOrg": {
+    "your-work-github-org": "work"
+  }
+}
