@@ -102,7 +102,10 @@ _cc_resolve() {
   local org
   org=$(_cc_git_org)
   if [ -n "$org" ]; then
-    prof=$(jq -r --arg o "$org" '(.byOrg // {})[$o] // empty | tostring' "$CC_FILE")
+    # case-insensitive, like GitHub (and the PowerShell version)
+    prof=$(jq -r --arg o "$org" \
+      '[(.byOrg // {}) | to_entries[] | select((.key | ascii_downcase) == ($o | ascii_downcase)) | .value][0] // empty | tostring' \
+      "$CC_FILE")
     if [ -n "$prof" ]; then
       CC_PROFILE=$prof; CC_DIR=$(_cc_config_dir "$prof")
       CC_REASON="git org: $org"; CC_SOURCE=byOrg; return
@@ -180,11 +183,19 @@ claude() {
   _cc_c gray "  +--------------------------------------------------"
 
   if [ "$auto_yes" != 1 ]; then
+    local -a names=()
+    [ "$(_cc_config_state)" = ok ] && mapfile -t names < <(jq -r '(.profiles // {}) | keys_unsorted[]' "$CC_FILE")
+    local i opts=''
+    for i in "${!names[@]}"; do opts+="  $((i + 1))) ${names[$i]}"; done
+    _cc_c gray "  [Enter] = $profile   |${opts:-  (no profiles)}   |  n = cancel"
     local resp
-    read -r -p "  Continue?  [Enter]=yes  /  n=no  /  type a profile name to override: " resp
+    read -r -p "  Account? " resp
+    if [[ "$resp" =~ ^[0-9]+$ ]] && [ "$resp" -ge 1 ] && [ "$resp" -le "${#names[@]}" ]; then
+      resp=${names[$((resp - 1))]}
+    fi
     case "$resp" in
-      [nN]*) _cc_c gray "  Cancelled."; return 0 ;;
-      ''|[yY]) ;;
+      [nN]|[nN][oO]) _cc_c gray "  Cancelled."; return 0 ;;
+      ''|[yY]|"$profile") ;;
       *)
         if [ "$(_cc_config_state)" = ok ] && _cc_has_profile "$resp"; then
           profile=$resp; dir=$(_cc_config_dir "$resp")

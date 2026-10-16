@@ -147,10 +147,18 @@ function claude {
   Write-Host "  +--------------------------------------------------" -ForegroundColor DarkGray
 
   if (-not $autoYes) {
-    $resp = Read-Host "  Continue?  [Enter]=yes  /  n=no  /  type a profile name to override"
-    if ($resp -match '^[nN]') { Write-Host "  Cancelled." -ForegroundColor DarkGray; return }
-    if ($resp -and ($resp -notmatch '^[yY]$')) {
-      $cfg = Get-CCConfig
+    $cfg = Get-CCConfig
+    $names = @()
+    if ($cfg -and ($cfg -ne 'INVALID') -and $cfg.profiles) { $names = @($cfg.profiles.PSObject.Properties.Name) }
+    $opts = ''
+    for ($i = 0; $i -lt $names.Count; $i++) { $opts += ("  " + ($i + 1) + ") " + $names[$i]) }
+    if (-not $opts) { $opts = '  (no profiles)' }
+    Write-Host ("  [Enter] = " + $profileName + "   |" + $opts + "   |  n = cancel") -ForegroundColor DarkGray
+    $resp = Read-Host "  Account?"
+    $n = 0
+    if ([int]::TryParse($resp, [ref]$n) -and $n -ge 1 -and $n -le $names.Count) { $resp = $names[$n - 1] }
+    if ($resp -match '^(n|no)$') { Write-Host "  Cancelled." -ForegroundColor DarkGray; return }
+    if ($resp -and ($resp -notmatch '^[yY]$') -and ($resp -ne $profileName)) {
       if ($cfg -and ($cfg -ne 'INVALID') -and $cfg.profiles -and $cfg.profiles.PSObject.Properties[$resp]) {
         $profileName = $resp; $dir = (Get-CCConfigDir $cfg $resp)
         Write-Host ("  -> override: " + $profileName) -ForegroundColor Cyan
