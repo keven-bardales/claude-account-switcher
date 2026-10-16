@@ -6,7 +6,7 @@ Claude Code uses **one account per config directory**. If you have more than one
 account (e.g. a personal one and a work one), it's easy to launch Claude with the
 wrong account in the wrong project — and you usually notice halfway through.
 
-This is a tiny PowerShell wrapper that, **every time you run `claude`**:
+This is a tiny shell wrapper — **PowerShell on Windows, bash on Linux** — that, **every time you run `claude`**:
 
 - resolves which account to use from the **folder / git repo** you're in (rules you set once),
 - **shows you the account** and asks you to confirm before launching,
@@ -44,12 +44,16 @@ This tool maps **folders / git orgs → profiles → config dirs**, and flips
 
 ## Requirements
 
-- Windows **PowerShell 5.1+**
 - [Claude Code](https://www.claude.com/product/claude-code) installed and on your `PATH`
+- **Windows:** PowerShell **5.1+**
+- **Linux:** **bash 4+** and [`jq`](https://jqlang.github.io/jq/)
+  (`sudo apt install jq` / `sudo dnf install jq` / `sudo pacman -S jq`)
 
 ---
 
 ## Install
+
+### Windows (PowerShell)
 
 ```powershell
 git clone https://github.com/keven-bardales/claude-account-switcher.git
@@ -68,6 +72,27 @@ Then **open a new PowerShell window** (or run `. $PROFILE`) to activate it.
 > Execution policy: dot-sourcing a local script needs `RemoteSigned` (or looser).
 > Check with `Get-ExecutionPolicy`; if it's `Restricted`, run
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+### Linux (bash)
+
+```bash
+git clone https://github.com/keven-bardales/claude-account-switcher.git
+cd claude-account-switcher
+./install.sh
+```
+
+The installer:
+
+- checks that `jq` is installed,
+- copies `claude-cli.sh` to `~/.claude-cli.sh`,
+- creates `~/.claude-accounts.json` with a Linux starter config (if you don't have one),
+- adds one `source` line to `~/.bashrc` (idempotent — re-running never duplicates it).
+
+Then **open a new terminal** (or run `source ~/.bashrc`) to activate it.
+
+> The wrapper is a bash function named `claude` that calls the real binary via
+> `command claude`, so `claude` keeps working exactly as before — it just asks first.
+> The banner and prompt go to stderr, so `claude -p ... > out.txt` stays clean.
 
 ---
 
@@ -92,10 +117,30 @@ Everything lives in **one central file**, `~/.claude-accounts.json` — never in
 }
 ```
 
+On Linux, use Linux paths (`~/` is expanded in `profiles` and `byPath`):
+
+```json
+{
+  "default": "personal",
+  "profiles": {
+    "personal": "",
+    "work": "/home/you/.claude-work"
+  },
+  "byPath": {
+    "/home/you/code/a-specific-work-repo": "work",
+    "~/work": "work"
+  },
+  "byOrg": {
+    "your-work-github-org": "work"
+  }
+}
+```
+
 - **`profiles`** — name → config dir. `""` means the default `~/.claude`.
   Give each non-default profile its own dir (e.g. `~/.claude-work`).
 - **`byPath`** — map a folder (or a specific repo path) to a profile.
   Longest matching prefix wins, so a child folder inherits its parent.
+  (Case-insensitive on Windows, case-sensitive on Linux.)
 - **`byOrg`** — map a GitHub **org/owner** (read from the repo's `git remote`)
   to a profile. Great for "all repos under this org use that account" — no
   per-repo files, no folder discipline.
@@ -105,7 +150,7 @@ Everything lives in **one central file**, `~/.claude-accounts.json` — never in
 
 ### Add a second account
 
-```powershell
+```bash
 cca login work     # opens Claude in the 'work' profile so you can /login once
 ```
 
@@ -123,7 +168,7 @@ Just run `claude` like always — the wrapper handles the rest.
 ```text
 cca which              show which account THIS folder resolves to
 cca list               print ~/.claude-accounts.json
-cca edit               open the config in Notepad
+cca edit               open the config (Windows: Notepad, Linux: $EDITOR or nano)
 cca set <profile> [p]  map a folder (default: current) to a profile
 cca login <profile>    open Claude in a profile so you can /login
 cca init               (re)create a starter config
